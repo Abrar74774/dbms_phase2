@@ -11,8 +11,7 @@ export default function Home() {
   useEffect(() => {
     getData()
   }, [])
-
-export default function Home(){
+  
   return (
     <div>
       <h1>Cost Estimator</h1>
