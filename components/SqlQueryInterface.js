@@ -16,7 +16,7 @@ export default function SqlQueryInterface() {
   const [tokens, setTokens] = useState({
     selectExpressions: [],
     tableExpressions: {},
-    whereExpressions: []
+    whereExpressions: {operation: null, conditions: []}
   });
   const [executionPlans, setExecutionPlans] = useState([]);
   const [cost, setCost] = useState(null);
@@ -121,81 +121,88 @@ function extractSelectAndTables(sqlQuery) {
   }
 
   function extractSigmaConditions(expression){
-    const sigmaConditions = {}
+    const sigmaConditions = {isEquality: false,
+    isRange: false}
     //NEED TO DEBUG THE NON-SPACING CASE
     const expressionMatch = expression.match(/(.*?)(>=|<=|=|>|<)(.*?)$/i);
 
     sigmaConditions.attribute = expressionMatch[1].trim();
-    sigmaConditions.operator = expressionMatch[2];
+    if(expressionMatch[2] == '='){
+      sigmaConditions.isEquality = true
+    }
+    else if(expressionMatch[2] == '>='|| expressionMatch[2] == '<='|| expressionMatch[2] == '>'|| expressionMatch[2] == '<'){
+      sigmaConditions.isRange = true
+    }
     sigmaConditions.value = expressionMatch[3].trim();
 
     return sigmaConditions
   }
 
   function extractWhereExpressions(whereExpression){
-    const whereExpressions = []
+    const whereExpressions = {operation: null,
+    conditions: []}
     let index = 0;
     while(whereExpression.length != 0){
       let match = whereExpression.match(/AND|OR/i)
     if(match == 'AND'){
-      if(whereExpression.match(/(.*?)(?:AND)/i)[1].includes('(')){
+      // if(whereExpression.match(/(.*?)(?:AND)/i)[1].includes('(')){
+      //   index = whereExpression.match(/AND/i).index
+      //   //whereExpressions.push('(')
+      //   whereExpressions.push(extractSigmaConditions(whereExpression.match(/\((.*?)(?:AND)/i)[1].trim()))
+      //   whereExpressions.push('AND');
+      //   whereExpression = whereExpression.slice(index+3).trim()
+      // }
+      // else if(whereExpression.match(/(.*?)(?:AND)/i)[1].includes(')')){
+      //   index = whereExpression.match(/AND/i).index
+      //   whereExpressions.push(extractSigmaConditions(whereExpression.match(/(.*?)\)(?:AND)/i)[1].trim()))
+      //   //whereExpressions.push('(')
+      //   whereExpressions.push('AND');
+      //   whereExpression = whereExpression.slice(index+3).trim()
+      // }
+      // else{
         index = whereExpression.match(/AND/i).index
-        whereExpressions.push('(')
-        whereExpressions.push(extractSigmaConditions(whereExpression.match(/\((.*?)(?:AND)/i)[1].trim()))
-        whereExpressions.push('AND');
+        whereExpressions.conditions.push(extractSigmaConditions(whereExpression.match(/(.*?)(?:AND)/i)[1].trim()))
+        whereExpressions.operation = 'AND';
         whereExpression = whereExpression.slice(index+3).trim()
-      }
-      else if(whereExpression.match(/(.*?)(?:AND)/i)[1].includes(')')){
-        index = whereExpression.match(/AND/i).index
-        whereExpressions.push(extractSigmaConditions(whereExpression.match(/(.*?)\)(?:AND)/i)[1].trim()))
-        whereExpressions.push('(')
-        whereExpressions.push('AND');
-        whereExpression = whereExpression.slice(index+3).trim()
-      }
-      else{
-        index = whereExpression.match(/AND/i).index
-        whereExpressions.push(extractSigmaConditions(whereExpression.match(/(.*?)(?:AND)/i)[1].trim()))
-        whereExpressions.push('AND');
-        whereExpression = whereExpression.slice(index+3).trim()
-      }
+      
 
     }else if(match == 'OR'){
-      if(whereExpression.match(/(.*?)(?:OR)/i)[1].includes('(')){
+      // if(whereExpression.match(/(.*?)(?:OR)/i)[1].includes('(')){
+      //   index = whereExpression.match(/OR/i).index
+      //   whereExpressions.push('(')
+      //   whereExpressions.push(extractSigmaConditions(whereExpression.match(/\((.*?)(?:OR)/i)[1].trim()))
+      //   whereExpressions.push('OR');
+      //   whereExpression = whereExpression.slice(index+2).trim()
+      // }
+      // else if(whereExpression.match(/(.*?)(?:OR)/i)[1].includes(')')){
+      //   index = whereExpression.match(/OR/i).index
+      //   whereExpressions.push(extractSigmaConditions(whereExpression.match(/(.*?)\)(?:OR)/i)[1].trim()))
+      //   whereExpressions.push(')')
+      //   whereExpressions.push('OR');
+      //   whereExpression = whereExpression.slice(index+2).trim()
+      // }
+      // else{
         index = whereExpression.match(/OR/i).index
-        whereExpressions.push('(')
-        whereExpressions.push(extractSigmaConditions(whereExpression.match(/\((.*?)(?:OR)/i)[1].trim()))
-        whereExpressions.push('OR');
+        whereExpressions.conditions.push(extractSigmaConditions(whereExpression.match(/(.*?)(?:OR)/i)[1].trim()))
+        whereExpressions.operation = 'OR';
         whereExpression = whereExpression.slice(index+2).trim()
-      }
-      else if(whereExpression.match(/(.*?)(?:OR)/i)[1].includes(')')){
-        index = whereExpression.match(/OR/i).index
-        whereExpressions.push(extractSigmaConditions(whereExpression.match(/(.*?)\)(?:OR)/i)[1].trim()))
-        whereExpressions.push(')')
-        whereExpressions.push('OR');
-        whereExpression = whereExpression.slice(index+2).trim()
-      }
-      else{
-        index = whereExpression.match(/OR/i).index
-        whereExpressions.push(extractSigmaConditions(whereExpression.match(/(.*?)(?:OR)/i)[1].trim()))
-        whereExpressions.push('OR');
-        whereExpression = whereExpression.slice(index+2).trim()
-      }
+      // }
   }else{
-    if(whereExpression.startsWith(')')){
-      whereExpressions.push(')')
-      whereExpressions.push(extractSigmaConditions(whereExpression.slice(1)))
+    // if(whereExpression.startsWith(')')){
+    //   whereExpressions.push(')')
+    //   whereExpressions.push(extractSigmaConditions(whereExpression.slice(1)))
+    //   return whereExpressions
+    // }
+    // else if(whereExpression.endsWith(')')){
+    //   let l = whereExpression.length
+    //   whereExpressions.push(extractSigmaConditions(whereExpression.slice(0,l-1)))
+    //   whereExpressions.push(')')
+    //   return whereExpressions
+    // }
+    // else{
+      whereExpressions.conditions.push(extractSigmaConditions(whereExpression))
       return whereExpressions
-    }
-    else if(whereExpression.endsWith(')')){
-      let l = whereExpression.length
-      whereExpressions.push(extractSigmaConditions(whereExpression.slice(0,l-1)))
-      whereExpressions.push(')')
-      return whereExpressions
-    }
-    else{
-      whereExpressions.push(extractSigmaConditions(whereExpression))
-      return whereExpressions
-    }
+    //}
     }
     }
     console.error('ERROR: --------------------------------------------------');
@@ -227,7 +234,7 @@ function extractSelectAndTables(sqlQuery) {
           <h2>Query Tokens:</h2>
           <p>SELECT Expressions: {tokens.selectExpressions}</p>
           <p>FROM Expressions: {tokens.tableExpressions.relations}</p>
-          <p>WHERE Expressions: {tokens.whereExpressions !== null?tokens.whereExpressions:"NONE"}</p>
+          {tokens.whereExpressions !== null?<p>WHERE Expressions -postfix-: {tokens.whereExpressions.conditions.map((c) => {{c.attribute}{c.value}})}{tokens.whereExpressions.operation?tokens.whereExpressions.operation:''}</p>:<p>NO WHERE Expression</p>}
         </ResultContainer>
       )}
       {cost !== null && (
