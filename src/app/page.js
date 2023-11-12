@@ -1,4 +1,5 @@
 "use client"
+import { useState, useEffect } from 'react';
 import SqlQueryInterface from '../../components/SqlQueryInterface'
 
 export default function Home() {
@@ -11,13 +12,17 @@ export default function Home() {
   useEffect(() => {
     getData()
   }, [])
-  
+
   return (
     <div>
-      <h1>Cost Estimator</h1>
+      <h1 style={style}>Cost Estimator</h1>
       <SqlQueryInterface />
     </div>
   );
 };
+
+const style = {
+  textAlign: 'center'
+}
 
 // export default Home
