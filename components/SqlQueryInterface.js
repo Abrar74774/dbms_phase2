@@ -220,11 +220,21 @@ function extractSelectAndTables(sqlQuery) {
   return t
   }
 
+  async function estimateCost(q){
+    const res = await fetch('/api')
+    const data = await res.json();
+    console.log(data.rows)
+    const meta_data_table = data.rows;
+    console.log(meta_data_table)
+    // console.log(meta_data_table)
+  }
+
   function handleExecuteQuery() {
     // ... (unchanged)
     console.log('Clicked!')
-    setTokens(parseQuery(query))
-    console.log(tokens)
+    // setTokens(parseQuery(query))
+    // console.log(tokens)
+    estimateCost(parseQuery(query))
   }
 
   return (
