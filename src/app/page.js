@@ -1,5 +1,6 @@
 "use client"
 import SqlQueryInterface from '../../components/SqlQueryInterface'
+import { useState, useEffect } from 'react';
 
 export default function Home() {
   const [output, setOutput] = useState();
