@@ -8,11 +8,11 @@ export default function Home() {
   const getData = () => {
     fetch('/api')
     .then(res => res.json())
-    .then(out => setOutput(out || "nothing"));
+    .then(out => console.log(out));
   }
-  // useEffect(() => {
-  //   getData()
-  // }, [])
+  useEffect(() => {
+    getData()
+  }, [])
   return (
     <main className={styles.main}>
       <div>
