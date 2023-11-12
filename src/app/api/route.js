@@ -12,16 +12,27 @@ const convertYN = (array) => {
 }
 
 export async function GET(req) {
-    let result;
+    let index;
+    let table;
     try {
         const query = 'SELECT * FROM meta_data_table;' // This is the query string
-        result = await conn.query(
+        table = await conn.query(
             query
         );
-        console.log("here", convertYN(result.rows));
+        console.log("here", convertYN(table.rows));
     } catch (error) {
         console.error("this is the error", error);
     }
 
-    return Response.json({ rows: convertYN(result.rows)})
+    try {
+        const query = 'SELECT * FROM INDEX_METADATA;' // This is the query string
+        index = await conn.query(
+            query
+        );
+        console.log("here", convertYN(index.rows));
+    } catch (error) {
+        console.error("this is the error", error);
+    }
+
+    return Response.json({ index: convertYN(index.rows), table:convertYN(table.rows)})
 }
