@@ -12,7 +12,7 @@ import {
 } from './SqlQueryInterface.styles';
 
 export default function SqlQueryInterface() {
-  const [query, setQuery] = useState(null);
+  const [query, setQuery] = useState("");
   const [tokens, setTokens] = useState({
     selectExpressions: [],
     tableExpressions: {},
@@ -27,7 +27,7 @@ export default function SqlQueryInterface() {
 
   function parseQuery(q){
 
-function extractSelectAndTables(sqlQuery) {
+  function extractSelectAndTables(sqlQuery) {
     // Regular expressions to match SELECT and FROM clauses
     const selectRegex = /SELECT (.*?) FROM/i;
     const fromRegex = /FROM (.*?)(?:WHERE|$)/i;
@@ -62,11 +62,9 @@ function extractSelectAndTables(sqlQuery) {
     }
   }
   
-  // Example usage:
-  const sqlQuery1 = 'SELECT FirstName, LastName FROM Employees WHERE Department = Sales';
-  //const sqlQuery2 = 'SELECT FirstName, LastName FROM Employees';
-  const sqlQuery3 = 'SELECT FirstName, PNO FROM Employees JOIN Project WHERE Department = "Sales" AND SSN <= 6';
   const result = extractSelectAndTables(q);
+  if(result == null)
+  return null
 
   function extractSelectExpressions(selectExpression){
     const selectExpressions = []
@@ -216,7 +214,7 @@ function extractSelectAndTables(sqlQuery) {
     tableExpressions: extractTableExpressions(result.tableExpression),
     whereExpressions: result.whereExpression?extractWhereExpressions(result.whereExpression):null
   }
-  //console.log(t)
+  console.log(t)
   return t
   }
 
@@ -232,7 +230,7 @@ function extractSelectAndTables(sqlQuery) {
   function handleExecuteQuery() {
     // ... (unchanged)
     console.log('Clicked!')
-    // setTokens(parseQuery(query))
+    setTokens(parseQuery(query))
     // console.log(tokens)
     estimateCost(parseQuery(query))
   }
@@ -240,13 +238,14 @@ function extractSelectAndTables(sqlQuery) {
   return (
     <Container>
       <TextArea value={query} onChange={handleQueryChange} />
-      <Button onClick={handleExecuteQuery}>Execute Query</Button>
+      <Button onClick={handleExecuteQuery}>Estimate Query</Button>
       {tokens !== null && (
         <ResultContainer>
           <h2>Query Information:</h2>
           <p>SELECT Expressions: {tokens.selectExpressions}</p>
-          <p>FROM Expressions: {tokens.tableExpressions.relations}</p>
-          {tokens.whereExpressions !== null?<p>WHERE Expressions -postfix-: {tokens.whereExpressions.conditions.map((c) => {{c.attribute}{c.ope}{c.value}})}</p>:<p>NO WHERE Expression</p>}
+          <p>FROM Expressions: {tokens.tableExpressions.relations + (tokens.tableExpressions.join?' (JOIN)':'')}</p>
+          <p>WHERE Expressions:</p>
+          {tokens.whereExpressions !== null?tokens.whereExpressions.conditions.map(c => <p>{"attribute: " + c.attribute + " ,operation: " + c.ope + " ,value: " + c.value}</p>):<p>None</p>}
         </ResultContainer>
       )}
       {cost !== null && (
