@@ -128,9 +128,11 @@ function extractSelectAndTables(sqlQuery) {
 
     sigmaConditions.attribute = expressionMatch[1].trim();
     if(expressionMatch[2] == '='){
+      sigmaConditions.ope = expressionMatch[2]
       sigmaConditions.isEquality = true
     }
     else if(expressionMatch[2] == '>='|| expressionMatch[2] == '<='|| expressionMatch[2] == '>'|| expressionMatch[2] == '<'){
+      sigmaConditions.ope = expressionMatch[2]
       sigmaConditions.isRange = true
     }
     sigmaConditions.value = expressionMatch[3].trim();
@@ -231,10 +233,10 @@ function extractSelectAndTables(sqlQuery) {
       <Button onClick={handleExecuteQuery}>Execute Query</Button>
       {tokens !== null && (
         <ResultContainer>
-          <h2>Query Tokens:</h2>
+          <h2>Query Information:</h2>
           <p>SELECT Expressions: {tokens.selectExpressions}</p>
           <p>FROM Expressions: {tokens.tableExpressions.relations}</p>
-          {tokens.whereExpressions !== null?<p>WHERE Expressions -postfix-: {tokens.whereExpressions.conditions.map((c) => {{c.attribute}{c.value}})}{tokens.whereExpressions.operation?tokens.whereExpressions.operation:''}</p>:<p>NO WHERE Expression</p>}
+          {tokens.whereExpressions !== null?<p>WHERE Expressions -postfix-: {tokens.whereExpressions.conditions.map((c) => {{c.attribute}{c.ope}{c.value}})}</p>:<p>NO WHERE Expression</p>}
         </ResultContainer>
       )}
       {cost !== null && (
