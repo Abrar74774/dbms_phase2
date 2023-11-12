@@ -10,9 +10,9 @@ export default function Home() {
     .then(res => res.json())
     .then(out => setOutput(out || "nothing"));
   }
-  useEffect(() => {
-    getData()
-  }, [])
+  // useEffect(() => {
+  //   getData()
+  // }, [])
   return (
     <main className={styles.main}>
       <div>
@@ -20,13 +20,7 @@ export default function Home() {
         <input id='sqlInput' className='input' type="text" placeholder="Enter SQL statement here" />
       </div>
       <div>
-        {!output ? <p>Output will be displayed here...</p>
-        :
-        <div>
-          <p>{output.fields.map(field => <span className={styles.field}>{field.name}</span> )}</p> 
-          <p>{output.rows.map(row => <span>{row}</span>)}</p>
-        </div>}
-       
+        <p>Output will be displayed here...</p>
       </div>
     </main>
   )

@@ -3,7 +3,7 @@ import conn from "@/lib/db";
 export async function GET(req) {
     let result;
     try {
-        const query = 'SELECT * FROM persons;'
+        const query = 'SELECT * FROM persons;' // This is the query string
         result = await conn.query(
             query
         );
