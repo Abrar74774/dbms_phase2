@@ -23,5 +23,5 @@ export async function GET(req) {
         console.error("this is the error", error);
     }
 
-    return Response.json({ rows: result.rows, fields: result.fields })
+    return Response.json({ rows: convertYN(result.rows)})
 }
