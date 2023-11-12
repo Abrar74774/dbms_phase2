@@ -221,7 +221,7 @@ function extractSelectAndTables(sqlQuery) {
   return (
     <Container>
       <TextArea value={query} onChange={handleQueryChange} />
-      <Button style={{border: 'none', boxShadow: 'rgba(149, 157, 165, 0.2) 0px 8px 24px'}} onClick={handleExecuteQuery}>Execute Query</Button>
+      <Button onClick={handleExecuteQuery}>Execute Query</Button>
       {tokens !== null && (
         <ResultContainer>
           <h2>Query Tokens:</h2>
