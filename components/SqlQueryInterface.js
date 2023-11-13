@@ -12,17 +12,17 @@ import {
 } from './SqlQueryInterface.styles';
 
 export default function SqlQueryInterface() {
-  const [query, setQuery] = useState("");
+  const [sql, setSql] = useState("");
   const [tokens, setTokens] = useState({
     selectExpressions: [],
     tableExpressions: {},
     whereExpressions: {operation: null, conditions: []}
   });
-  const [executionPlans, setExecutionPlans] = useState([]);
-  const [cost, setCost] = useState(null);
+  //const [executionPlans, setExecutionPlans] = useState([]);
+  const [e, setE] = useState(null);
 
   function handleQueryChange(e) {
-    setQuery(e.target.value);
+    setSql(e.target.value);
   }
 
   function parseQuery(q){
@@ -222,22 +222,326 @@ export default function SqlQueryInterface() {
     const res = await fetch('/api')
     const data = await res.json();
     console.log(data.rows)
-    const meta_data_table = data.rows;
+    const meta_data_table = data.table;
     console.log(meta_data_table)
-    // console.log(meta_data_table)
+    const index_Meta = data.index;
+    console.log(index_Meta);
+
+    //estimation logic:
+    function CalculateExecutionPlan(query){
+      if(!query.tableExpressions.join){
+          let table = query.tableExpressions.relations[0];
+          if(query.whereExpressions.operation == null){
+              for (const condition of query.whereExpressions.conditions){
+                      if(condition.isEquality){
+                          return estimateEqualitySelection(table, condition.attribute)
+                      }
+                      else if(condition.isRange){
+                          return estimateRangeSelection(table, condition.attribute)
+                      }
+                  }
+              }else if(query.whereExpressions.operation.toLowerCase() == "or"){
+                  return (handleOrCondition(table))
+              }else if(query.whereExpressions.operation.toLowerCase() == "and"){
+                  let condition1 = query.whereExpressions.conditions[0];
+                  let condition2 = query.whereExpressions.conditions[1];
+                  return (handleAndCondition(table, condition1, condition2))
+              }
+      }else{
+          return estimateJoin("manager", "project", "ssn", "ssn")
+      }
+  }
+  console.log("HEY, QUERY HANDLING DONE!")
+  
+  
+  
+  
+  
+  function handleOrCondition(table){
+      let first = meta_data_table.filter((element) => 
+      element.table_name.toLowerCase() == table.toLowerCase());
+      let thisOBJ = first[0];
+      let cost = thisOBJ.b;
+  
+      let finalOBject = {
+          plan: "Use sequential search",
+          cost: cost
+      }
+  
+      return finalOBject
+  
+  }
+  
+  
+  function handleAndCondition(table, condition1, condition2){
+  
+      let Cost1;
+      let Cost2;
+      if(condition1.isEquality){
+          let C1 = estimateEqualitySelection(table, condition1.attribute)
+          const suggestion = C1.suggestion;
+          const lowestCostMatch = suggestion.match(/\d+/); 
+  
+          // Checking if lowestCostMatch is not null before accessing its value
+          Cost1 = lowestCostMatch ? parseInt(lowestCostMatch[0]) : null;
+          console.log(Cost1);
+      }else if(condition1.isRange){
+          let C1 = estimateRangeSelection(table, condition1.attribute)
+          const suggestion = C1.suggestion;
+          const lowestCostMatch = suggestion.match(/\d+/); 
+  
+          // Checking if lowestCostMatch is not null before accessing its value
+          Cost1 = lowestCostMatch ? parseInt(lowestCostMatch[0]) : null;
+          console.log(Cost1);
+      }
+  
+  
+      if(condition2.isEquality){
+          let C2 = estimateEqualitySelection(table, condition2.attribute)
+          const suggestion = C2.suggestion;
+          const lowestCostMatch = suggestion.match(/\d+/); 
+  
+          // Checking if lowestCostMatch is not null before accessing its value
+          Cost2 = lowestCostMatch ? parseInt(lowestCostMatch[0]) : null;
+          console.log(Cost2);
+      }else if(condition2.isRange){
+          let C2 = estimateRangeSelection(table, condition2.attribute)
+          const suggestion = C2.suggestion;
+          const lowestCostMatch = suggestion.match(/\d+/); 
+  
+          // Checking if lowestCostMatch is not null before accessing its value
+          Cost2 = lowestCostMatch ? parseInt(lowestCostMatch[0]) : null;
+          console.log(Cost2);
+      }
+  
+  
+      let finalCost = Math.min(Cost1, Cost2);
+  
+      let finalOBject = {
+          plan: "Use the condition with the lower cost first",
+          cost: finalCost
+      }
+  
+      return finalOBject
+  
+  
+  }
+  function estimateEqualitySelection(table, attribute){
+      let executionPlansArray = [];
+      let CostArray = [];
+      let planCount = 0;
+      let cost;
+      let first = meta_data_table.filter((element) => 
+      element.table_name.toLowerCase() == table.toLowerCase() && element.attribute.toLowerCase() == attribute.toLowerCase());
+      let attributeOBJ = first[0];
+      if(attributeOBJ.is_pk){
+          planCount++
+          console.log("Use primary index");
+          console.log(`cost ${planCount} :`);
+          let thisIndexArray = index_Meta.filter(index => 
+              index.table_name.toLowerCase() == table.toLowerCase() && index.index_attribute.toLowerCase() == attribute.toLowerCase()
+          );
+          let thisIndex = thisIndexArray[0]
+          cost = thisIndex.index_levels + 1 //x+1
+          console.log(Math.ceil(cost));
+          CostArray.push(Math.ceil(cost));
+          executionPlansArray.push(`Cost for using primary index: ${Math.ceil(cost)}`);
+      }
+      if(attributeOBJ.has_secondary_index){
+          planCount++
+          console.log("Use Secondary index");
+          console.log(`cost ${planCount} :`);
+          let thisIndexArray = index_Meta.filter(index => 
+              index.table_name.toLowerCase() == table.toLowerCase() && index.index_attribute.toLowerCase() == attribute.toLowerCase()
+          );
+          let thisIndex = thisIndexArray[0];
+          let sel_car = attributeOBJ.attribute_selectivity * attributeOBJ.num_of_rows;
+          cost = thisIndex.index_levels  + (sel_car) //x+s (worst case)
+          console.log(Math.ceil(cost));
+          CostArray.push(Math.ceil(cost));
+          executionPlansArray.push(`Cost for using secondary index: ${Math.ceil(cost)}`);
+      }
+      //for sequential/linear search:
+      planCount++
+      console.log("Use sequential Search");
+      console.log(`cost ${planCount} :`);
+      cost = (attributeOBJ.b)/2 //b/2 on average
+      console.log(Math.ceil(cost));
+      CostArray.push(Math.ceil(cost));
+      executionPlansArray.push(`Cost for using sequential search: ${Math.ceil(cost)}`);
+  
+      //for Binary Search:
+      planCount++
+      console.log("Use Binary Search");
+      console.log(`cost ${planCount} :`);
+      let sel_car = attributeOBJ.attribute_selectivity * attributeOBJ.num_of_rows; //s = sl*r
+      cost = (Math.log2(attributeOBJ.b) )+ (Math.ceil(sel_car/attributeOBJ.bfr)) - 1  ; //[log2(b) + (s/bfr) - 1] where s is selection cardinality = sl * r
+      console.log(Math.ceil(cost));
+      CostArray.push(Math.ceil(cost));
+      executionPlansArray.push(`Cost for using binary search: ${Math.ceil(cost)}`);
+  
+  
+      let lowestCost = findLowestCost(CostArray);
+      console.log("lowestCost available: "+lowestCost);
+  
+  
+      let finalOBject = {
+          plan: executionPlansArray,
+          suggestion: `use the plan with the cost: `+ lowestCost
+      }
+  
+      return finalOBject
+  };
+  
+  function estimateRangeSelection(table, attribute){
+      let executionPlansArray = []
+      let CostArray = [];
+      let planCount = 0;
+      let cost;
+      let first = meta_data_table.filter((element) => 
+      element.table_name.toLowerCase() == table.toLowerCase() && element.attribute.toLowerCase() == attribute.toLowerCase());
+      let attributeOBJ = first[0];
+      console.log(attributeOBJ);
+      if(attributeOBJ.is_ordering){
+          planCount++
+          console.log("Use Ordering index");
+          console.log(`cost ${planCount} :`);
+          let thisIndexArray = index_Meta.filter(index => 
+              index.table_name.toLowerCase() == table.toLowerCase() && index.index_attribute.toLowerCase() == attribute.toLowerCase()
+          );
+          let thisIndex = thisIndexArray[0]
+          cost = thisIndex.index_levels + (attributeOBJ.b/2) //x+b/2
+          console.log(Math.ceil(cost));
+          CostArray.push(Math.ceil(cost));
+          executionPlansArray.push(`Cost for using ordering index: ${Math.ceil(cost)}`);
+      }
+      if(attributeOBJ.has_secondary_index){
+          planCount++
+          console.log("Use Secondary index");
+          console.log(`cost ${planCount} :`);
+          let thisIndexArray = index_Meta.filter(index => 
+              index.table_name.toLowerCase() == table.toLowerCase() && index.index_attribute.toLowerCase() == attribute.toLowerCase()
+          );
+          let thisIndex = thisIndexArray[0];
+          // console.log(thisIndex)
+          cost = thisIndex.index_levels + (thisIndex.bi/2) + (attributeOBJ.num_of_rows/2) //x+(bI/2)+(r/2)
+          console.log(Math.ceil(cost));
+          CostArray.push(Math.ceil(cost));
+          executionPlansArray.push(`Cost for using secondary index: ${Math.ceil(cost)}`);
+  
+      }
+      //for sequential/linear search:
+      planCount++
+      console.log("Use sequential Search");
+      console.log(`cost ${planCount} :`);
+      cost = attributeOBJ.b //b (worst case)
+      console.log(Math.ceil(cost));
+      CostArray.push(Math.ceil(cost));
+      executionPlansArray.push(`Cost for using sequential search: ${Math.ceil(cost)}`);
+  
+      let lowestCost = findLowestCost(CostArray);
+      console.log("lowestCost available: "+lowestCost);
+  
+      let finalOBject = {
+          plan: executionPlansArray,
+          suggestion: `use the plan with the cost: ` + lowestCost
+      }
+  
+      return finalOBject
+  
+  
+  }
+  
+  
+  
+  
+  function findLowestCost(numbers) {
+      if (numbers.length === 0) {
+        
+        return undefined;
+      }
+    
+      // Use the apply method to pass the array elements as arguments to Math.min
+      return Math.min.apply(null, numbers);
+    }
+  
+  function estimateJoin(table1, table2, attribute1, attribute2){
+      //only one situation: Manager.SSN(PK) = Project.SSN(FK)
+      //Join selectivity should be ratio of the size of the resulting join file to the size of the cartesian product file
+      //should be 1000 (number of tuples for the equijoined table) over 100*1000 = 100,000, so js = 1000/100,000 = 0.01
+      let executionPlansArray = []
+  
+      let CostArray =[];
+      let first = meta_data_table.filter((element) => 
+      element.table_name == table1.toLowerCase() && element.attribute == attribute1.toLowerCase());
+      let first_NDV = first[0].attribute_ndv;
+      // console.log("HERE")
+      // console.log(first);
+      // console.log(first_NDV);
+  
+      let second = meta_data_table.filter((element) => 
+      element.table_name == table2.toLowerCase() && element.attribute == attribute2.toLowerCase());
+      let second_NDV = second[0].attribute_ndv;
+      let joinSelectivity = 1/(Math.max(first_NDV, second_NDV));
+      let joinCardinality = joinSelectivity * first[0].num_of_rows * second[0].num_of_rows; //js * |MANGER| * |PROJECT|
+  
+  
+      console.log("JOIN SELECTIVITY: "+joinSelectivity);
+      console.log("JOIN CARDINALITY " + joinCardinality);
+      console.log(`For Nested loop join with ${first[0].table_name} relation as outer loop: `+'\n'); //ASSUMING 3 main memory buffer pages
+      let CJ1a = first[0].b + (first[0].b * second[0].b);
+      console.log(CJ1a);
+      CostArray.push(CJ1a)
+      executionPlansArray.push(`Cost for using Nested loop join with ${first[0].table_name} relation as outer loop: ${CJ1a}`)
+      console.log(`For Nested loop join with ${second[0].table_name} relation as outer loop: `+'\n');
+      let CJ1b = second[0].b + (first[0].b * second[0].b);
+      console.log(CJ1b);
+      CostArray.push(CJ1b)
+      executionPlansArray.push(`Cost for using Nested loop join with ${second[0].table_name} relation as outer loop: ${CJ1b}`)
+      console.log(`For indexed baessd nested loop join with ${first[0].table_name} relation as outer loop:`)
+      let first_index = index_Meta.filter((element) => 
+      element.table_name.toLowerCase() == table1.toLowerCase() && element.index_attribute.toLowerCase() == attribute1.toLowerCase());
+      let first_index_level = first_index[0].index_levels;
+      let CJ2a = first[0].b + (first[0].num_of_rows * (first_index_level + (first[0].attribute_selectivity * first[0].num_of_rows)));
+      console.log(CJ2a);
+      CostArray.push(CJ2a)
+      executionPlansArray.push(`Cost for using indexed baessd nested loop join with ${first[0].table_name} relation as outer loop: ${CJ2a}`)
+  
+      console.log(`For indexed based nested loop join ${second[0].table_name} relation as outer loop:`)
+      let second_index = index_Meta.filter((element) => 
+      element.table_name.toLowerCase() == table2.toLowerCase() && element.index_attribute.toLowerCase() == attribute2.toLowerCase());
+      let second_index_level = second_index[0].index_levels;
+      let CJ2b = second[0].b + (second[0].num_of_rows * (second_index_level + (second[0].attribute_selectivity * second[0].num_of_rows)));
+      console.log(CJ2b);
+      CostArray.push(CJ2b)
+      executionPlansArray.push(`Cost for using indexed baessd nested loop join with ${second[0].table_name} relation as outer loop: ${CJ2b}`)
+      console.log(CostArray)
+      let lowestCost = findLowestCost(CostArray);
+      console.log(lowestCost);
+  
+      let finalOBject = {
+          plan: executionPlansArray,
+          suggestion: `use the plan with the cost: ` + lowestCost
+      }
+  
+      return finalOBject
+  
+  };
+  
+  CalculateExecutionPlan(q)
   }
 
   function handleExecuteQuery() {
     // ... (unchanged)
     console.log('Clicked!')
-    setTokens(parseQuery(query))
+    setTokens(parseQuery(sql))
     // console.log(tokens)
-    estimateCost(parseQuery(query))
+    console.log(estimateCost(parseQuery(sql)))
   }
 
   return (
     <Container>
-      <TextArea value={query} onChange={handleQueryChange} />
+      <TextArea value={sql} onChange={handleQueryChange} />
       <Button onClick={handleExecuteQuery}>Estimate Query</Button>
       {tokens !== null && (
         <ResultContainer>
@@ -248,13 +552,13 @@ export default function SqlQueryInterface() {
           {tokens.whereExpressions !== null?tokens.whereExpressions.conditions.map(c => <p>{"attribute: " + c.attribute + " ,operation: " + c.ope + " ,value: " + c.value}</p>):<p>None</p>}
         </ResultContainer>
       )}
-      {cost !== null && (
+      {e !== null && (
         <ResultContainer>
           <h2>Estimated Cost:</h2>
-          <p>{cost}</p>
+          <p>{e}</p>
         </ResultContainer>
       )}
-      {executionPlans.length > 0 && (
+      {/* {executionPlans.length > 0 && (
         <ResultContainer>
           <h2>Execution Plans:</h2>
           <Table>
@@ -276,7 +580,7 @@ export default function SqlQueryInterface() {
             </tbody>
           </Table>
         </ResultContainer>
-      )}
+      )} */}
     </Container>
   );
 }
