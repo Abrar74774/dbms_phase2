@@ -562,11 +562,11 @@ export default function SqlQueryInterface() {
         {
         <ResultContainer>
           <h2>Estimated Cost:</h2>
-          <p>Cost for using Nested loop join with manager relation as outer loop: 1010</p>
+          {/* <p>Cost for using Nested loop join with manager relation as outer loop: 1010</p>
           <p>Cost for using Nested loop join with project relation as outer loop: 1100</p>
           <p>Cost for using indexed baessd nested loop join with manager relation as outer loop: 210</p>
           <p>Cost for using indexed baessd nested loop join with project relation as outer loop: 13100</p>
-          <p>use the plan with the cost: 210</p>
+          <p>use the plan with the cost: 210</p> */}
         </ResultContainer>
         }
       {/* )} */}
