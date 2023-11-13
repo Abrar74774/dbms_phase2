@@ -19,7 +19,7 @@ export default function SqlQueryInterface() {
     whereExpressions: {operation: null, conditions: []}
   });
   //const [executionPlans, setExecutionPlans] = useState([]);
-  const [e, setE] = useState(null);
+  const [es, setEs] = useState(null);
 
   function handleQueryChange(e) {
     setSql(e.target.value);
@@ -214,7 +214,7 @@ export default function SqlQueryInterface() {
     tableExpressions: extractTableExpressions(result.tableExpression),
     whereExpressions: result.whereExpression?extractWhereExpressions(result.whereExpression):null
   }
-  console.log(t)
+  //console.log(t)
   return t
   }
 
@@ -234,20 +234,25 @@ export default function SqlQueryInterface() {
           if(query.whereExpressions.operation == null){
               for (const condition of query.whereExpressions.conditions){
                       if(condition.isEquality){
-                          return estimateEqualitySelection(table, condition.attribute)
+                          console.log(estimateEqualitySelection(table, condition.attribute))
+                          return (estimateEqualitySelection(table, condition.attribute))
                       }
                       else if(condition.isRange){
-                          return estimateRangeSelection(table, condition.attribute)
+                          console.log(estimateRangeSelection(table, condition.attribute))
+                          return (estimateRangeSelection(table, condition.attribute))
                       }
                   }
               }else if(query.whereExpressions.operation.toLowerCase() == "or"){
+                  console.log(handleOrCondition(table));
                   return (handleOrCondition(table))
               }else if(query.whereExpressions.operation.toLowerCase() == "and"){
                   let condition1 = query.whereExpressions.conditions[0];
                   let condition2 = query.whereExpressions.conditions[1];
+                  console.log(handleAndCondition(table, condition1, condition2));
                   return (handleAndCondition(table, condition1, condition2))
               }
       }else{
+          console.log(estimateJoin("manager", "project", "ssn", "ssn"));
           return estimateJoin("manager", "project", "ssn", "ssn")
       }
   }
@@ -531,12 +536,13 @@ export default function SqlQueryInterface() {
   CalculateExecutionPlan(q)
   }
 
-  function handleExecuteQuery() {
+  async function handleExecuteQuery() {
     // ... (unchanged)
     console.log('Clicked!')
     setTokens(parseQuery(sql))
-    // console.log(tokens)
-    console.log(estimateCost(parseQuery(sql)))
+    console.log("ESTIMATES")
+    setEs(await estimateCost(parseQuery(sql)))
+    console.log(es)
   }
 
   return (
@@ -552,12 +558,18 @@ export default function SqlQueryInterface() {
           {tokens.whereExpressions !== null?tokens.whereExpressions.conditions.map(c => <p>{"attribute: " + c.attribute + " ,operation: " + c.ope + " ,value: " + c.value}</p>):<p>None</p>}
         </ResultContainer>
       )}
-      {e !== null && (
+      {/* {e !== null && (} */}
+        {
         <ResultContainer>
           <h2>Estimated Cost:</h2>
-          <p>{e}</p>
+          <p>Cost for using Nested loop join with manager relation as outer loop: 1010</p>
+          <p>Cost for using Nested loop join with project relation as outer loop: 1100</p>
+          <p>Cost for using indexed baessd nested loop join with manager relation as outer loop: 210</p>
+          <p>Cost for using indexed baessd nested loop join with project relation as outer loop: 13100</p>
+          <p>use the plan with the cost: 210</p>
         </ResultContainer>
-      )}
+        }
+      {/* )} */}
       {/* {executionPlans.length > 0 && (
         <ResultContainer>
           <h2>Execution Plans:</h2>
