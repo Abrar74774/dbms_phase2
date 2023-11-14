@@ -539,7 +539,7 @@ export default function SqlQueryInterface() {
   }
 
   function handleExecuteQuery() {
-    console.log('Clicked!')
+    setTokens(parseQuery(sql))
     setClick(Math.floor(Math.random() * (100000 - 1) + 1))
   }
 
