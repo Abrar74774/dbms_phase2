@@ -1,5 +1,5 @@
 // components/SqlQueryInterface.js
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Container,
   TextArea,
@@ -20,6 +20,8 @@ export default function SqlQueryInterface() {
   });
   //const [executionPlans, setExecutionPlans] = useState([]);
   const [es, setEs] = useState(null);
+  const [click, setClick] = useState()
+  const [loading, setLoading] = useState()
 
   function handleQueryChange(e) {
     setSql(e.target.value);
@@ -533,17 +535,28 @@ export default function SqlQueryInterface() {
   
   };
   
-  CalculateExecutionPlan(q)
+  return CalculateExecutionPlan(q)
   }
 
-  async function handleExecuteQuery() {
-    // ... (unchanged)
+  function handleExecuteQuery() {
     console.log('Clicked!')
-    setTokens(parseQuery(sql))
-    console.log("ESTIMATES")
-    setEs(await estimateCost(parseQuery(sql)))
-    console.log(es)
+    setClick(Math.floor(Math.random() * (100000 - 1) + 1))
   }
+
+  useEffect(() => {
+    // Call yourFunction after the initial render
+    async function handleQuery() {
+      try{      
+        setLoading(true)
+        const estimates = await estimateCost(parseQuery(sql))
+        setEs(estimates)
+      }finally{
+        setLoading(false)
+      }
+    }
+
+    handleQuery();
+  }, [click]);
 
   return (
     <Container>
@@ -559,16 +572,13 @@ export default function SqlQueryInterface() {
         </ResultContainer>
       )}
       {/* {e !== null && (} */}
-        {
+        {es !== null && ( loading?  <ResultContainer><h2>Loading..</h2> </ResultContainer> :
         <ResultContainer>
           <h2>Estimated Cost:</h2>
-          {/* <p>Cost for using Nested loop join with manager relation as outer loop: 1010</p>
-          <p>Cost for using Nested loop join with project relation as outer loop: 1100</p>
-          <p>Cost for using indexed baessd nested loop join with manager relation as outer loop: 210</p>
-          <p>Cost for using indexed baessd nested loop join with project relation as outer loop: 13100</p>
-          <p>use the plan with the cost: 210</p> */}
+          {es.plan.map(p => <p>{p}</p>)}
+          <p>suggestion: {es.suggestion}</p>
         </ResultContainer>
-        }
+        )}
       {/* )} */}
       {/* {executionPlans.length > 0 && (
         <ResultContainer>
