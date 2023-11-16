@@ -271,8 +271,8 @@ export default function SqlQueryInterface() {
       let cost = thisOBJ.b;
   
       let finalOBject = {
-          plan: "Use sequential search",
-          cost: cost
+          plan: ["Use sequential search"],
+          suggestion: "The plan cost is "+cost
       }
   
       return finalOBject
@@ -325,8 +325,8 @@ export default function SqlQueryInterface() {
       let finalCost = Math.min(Cost1, Cost2);
   
       let finalOBject = {
-          plan: "Use the condition with the lower cost first",
-          cost: finalCost
+          plan: ["Use the condition with the lower cost first"],
+          suggestion: "The plan cost is "+finalCost
       }
   
       return finalOBject
